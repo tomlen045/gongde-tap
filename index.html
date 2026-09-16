@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>电子功德 · 赛博积德</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:linear-gradient(180deg,#1a120b,#0d0a06 70%);color:#f5e6c8;font-family:-apple-system,'PingFang SC',sans-serif;min-height:100vh;overflow-x:hidden}
+.wrap{max-width:480px;margin:0 auto;padding:24px 18px 60px;text-align:center}
+h1{font-size:24px;margin:10px 0 2px;color:#ffd166;letter-spacing:4px}
+.sub{color:#a89778;font-size:13px;margin-bottom:20px}
+.gd{font-size:56px;font-weight:900;color:#ffd166;margin:6px 0;text-shadow:0 0 30px rgba(255,209,102,.4)}
+.gdl{color:#a89778;font-size:14px}
+.combo{font-size:20px;font-weight:bold;color:#ff9f43;height:30px}
+#fish{width:190px;height:190px;margin:18px auto 8px;background:radial-gradient(circle at 35% 30%,#4a3822,#241a0e);border-radius:50%;border:6px solid #ffd166;font-size:96px;line-height:178px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;transition:transform .06s;box-shadow:0 0 50px rgba(255,209,102,.25),inset 0 0 30px rgba(0,0,0,.6)}
+#fish:active{transform:scale(.92)}
+.fl{position:fixed;font-size:22px;font-weight:900;color:#ffd166;pointer-events:none;animation:fl 1.2s ease-out forwards;text-shadow:0 0 12px rgba(255,209,102,.8);z-index:9}
+@keyframes fl{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-90px) scale(1.3)}}
+.stats{display:flex;gap:10px;margin:22px 0}
+.st{flex:1;background:rgba(255,209,102,.07);border:1px solid rgba(255,209,102,.25);border-radius:14px;padding:14px 6px}
+.st .n{font-size:26px;font-weight:900;color:#ffd166}
+.st .l{font-size:12px;color:#a89778;margin-top:2px}
+#toast{position:fixed;left:50%;top:20%;transform:translateX(-50%);background:#ffd166;color:#241a0e;font-size:20px;font-weight:900;padding:12px 30px;border-radius:99px;opacity:0;pointer-events:none;transition:.4s;z-index:99;white-space:nowrap}
+#toast.show{opacity:1}
+.card{background:rgba(255,209,102,.06);border:1px solid rgba(255,209,102,.25);border-radius:16px;padding:20px;margin-top:16px;text-align:left}
+.row{display:flex;justify-content:space-between;padding:10px 4px;border-bottom:1px dashed rgba(255,209,102,.2);font-size:15px}
+.row b{color:#ffd166}
+.title{font-size:30px;font-weight:900;color:#ffd166;margin:8px 0}
+.foot{color:#6b5d45;font-size:12px;margin-top:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🪵 电子功德</h1>
+<p class="sub">赛博积德 · 功德+1 · 烦恼-1</p>
+<div class="combo" id="combo"></div>
+<div id="fish">🪵</div>
+<div class="gd" id="gd">0</div>
+<div class="gdl">今日功德</div>
+<div class="stats">
+ <div class="st"><div class="n" id="total">0</div><div class="l">累计功德</div></div>
+ <div class="st"><div class="n" id="best">0</div><div class="l">最高连击</div></div>
+ <div class="st"><div class="n" id="days">1</div><div class="l">修行天数</div></div>
+</div>
+<div class="card" id="achCard">
+ <p style="color:#a89778;font-size:14px;margin-bottom:8px;">🏅 功德称号体系</p>
+ <div class="row"><span>0 ~ 99</span><b>初入空门</b></div>
+ <div class="row"><span>100 ~ 499</span><b>小有功德</b></div>
+ <div class="row"><span>500 ~ 1079</span><b>功德无量</b></div>
+ <div class="row"><span>1080 ~ 4999</span><b>赛博高僧</b></div>
+ <div class="row" style="border:none"><span>5000+</span><b>佛祖点头 · 见者有份</b></div>
+</div>
+<button class="btn" id="cardBtn" style="display:none;width:100%;background:#ffd166;color:#241a0e;border:none;border-radius:99px;padding:15px;font-size:16px;font-weight:900;cursor:pointer;margin-top:14px" onclick="card()">🎴 生成我的功德档案</button>
+<p class="foot">心诚则灵 · 数据仅存本机 · 小薅薅出品</p>
+</div>
+<div id="toast"></div>
+<canvas id="cd" width="1080" height="1440" style="display:none"></canvas>
+<script>
+let D=JSON.parse(localStorage.getItem("gongde")||"null")||{t:0,today:0,best:0,day:new Date().toDateString()};
+if(D.day!==new Date().toDateString()){D.today=0;D.day=new Date().toDateString()}
+let combo=0,comboT=null,lastTap=0;
+const tier=n=>n>=5000?"赛博高僧":n>=1080?"功德无量":n>=100?"小有功德":"初入空门";
+function save(){localStorage.setItem("gongde",JSON.stringify(D))}
+function render(){
+ document.getElementById("gd").textContent=D.today.toLocaleString();
+ document.getElementById("total").textContent=D.t.toLocaleString();
+ document.getElementById("best").textContent=D.best.toLocaleString();
+ document.getElementById("days").textContent=1;
+}
+function toast(t){const e=document.getElementById("toast");e.textContent=t;e.classList.add("show");setTimeout(()=>e.classList.remove("show"),1800);}
+document.getElementById("fish").addEventListener("pointerdown",e=>{
+ const now=Date.now();
+ combo=(now-lastTap<800)?combo+1:1;lastTap=now;
+ D.best=Math.max(D.best,combo);
+ let gain=combo>=10?combo:1;
+ D.today+=gain;D.t+=gain;
+ const fl=document.createElement("div");fl.className="fl";fl.textContent="+"+gain+" 功德";
+ fl.style.left=(e.clientX-30+(Math.random()*60-30))+"px";fl.style.top=(e.clientY-40)+"px";
+ document.body.appendChild(fl);setTimeout(()=>fl.remove(),1200);
+ if(combo>=5)document.getElementById("combo").textContent="🔥 连击 x"+combo;
+ else document.getElementById("combo").textContent="";
+ const marks=[[100,"🏅 达成：小有功德"],[500,"🏅 达成：功德无量"],[1080,"🏅 达成：赛博高僧"],[5000,"🙏 佛祖点了点头"]];
+ marks.forEach(m=>{if(D.t-gain<m[0]&&D.t>=m[0])toast(m[1]);});
+ render();save();
+});
+function card(){
+ const c=document.getElementById("cd"),x=c.getContext("2d");
+ x.fillStyle="#1a120b";x.fillRect(0,0,1080,1440);
+ x.textAlign="center";x.fillStyle="#ffd166";x.font="bold 44px sans-serif";x.fillText("🪵 电子功德档案",540,120);
+ x.fillStyle="#a89778";x.font="24px sans-serif";x.fillText(new Date().toLocaleDateString(),540,168);
+ x.font="900 150px sans-serif";x.fillStyle="#ffd166";x.fillText(D.t.toLocaleString(),540,400);
+ x.font="30px sans-serif";x.fillStyle="#a89778";x.fillText("累计功德",540,450);
+ x.fillStyle="#f5e6c8";x.font="bold 60px sans-serif";x.fillText("「"+tier(D.t)+"」",540,560);
+ const rows=[["今日功德",D.today.toLocaleString()],["最高连击",D.best+" 连"],["修行天数","1 天"],["称号",tier(D.t)]];
+ rows.forEach((r,i)=>{const y=680+i*100;
+  x.fillStyle="rgba(255,209,102,.08)";x.fillRect(90,y-46,900,80);
+  x.textAlign="left";x.fillStyle="#f5e6c8";x.font="30px sans-serif";x.fillText(r[0],130,y+10);
+  x.textAlign="right";x.fillStyle="#ffd166";x.font="900 38px sans-serif";x.fillText(r[1],950,y+10);});
+ x.textAlign="center";x.fillStyle="#a89778";x.font="26px sans-serif";
+ x.fillText("敲的是木鱼，静的是心",540,1240);
+ x.fillStyle="#ffd166";x.font="bold 30px sans-serif";x.fillText("🔍 搜「小薅薅」· 一起积功德",540,1320);
+ c.style.display="block";
+ const a=document.createElement("a");a.download="gongde.png";a.href=c.toDataURL();a.click();
+}
+render();
+</script>
+</body>
+</html>
